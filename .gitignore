@@ -1,0 +1,42 @@
+# ignore files build by Visual Studio
+*.obj
+*.exe
+*.pdb
+*.user
+*.aps
+*.pch
+*.vspscc
+*_i.c
+*_p.c
+*.ncb
+*.suo
+*.tlb
+*.tlh
+*.bak
+*.cache
+*.ilk
+*.log
+[Bb]in
+[Dd]ebug*/
+*.lib
+*.sbr
+obj/
+[Rr]elease*/
+*.[oae]
+*.*~
+*.so
+moc_*.*
+*.tmp
+[Mm]akefile
+[Mm]akefile.*
+ui_*.h
+doc/doc/
+*.tag
+tags
+types_c.taghl
+*.swp
+*.pro.user.*
+<<<<<<< HEAD
+ 
+=======
+>>>>>>> master
