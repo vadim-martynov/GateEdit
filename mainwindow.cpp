@@ -532,38 +532,41 @@ void MainWindow::FillTables(quint8 i)
     foreach(CIdEntry entry, segs[i].segMap)
     {
         //qDebug() << entry.type << entry.id << entry.name.toLocal8Bit();
-        for(quint8 j = 0; j < count+1; j++)
+        if(entry.type != 0)
         {
-            switch (j)
+            for(quint8 j = 0; j < count+1; j++)
             {
-            case 0:
-                segs[i].table->setItem(row, j, new QTableWidgetItem(entry.id));
-                break;
-            case 1:
-                segs[i].table->setItem(row, j, new QTableWidgetItem(QString(entry.name)));
-                break;
-            default:
-            {
-                segs[i].table->setItem(row, j, new QTableWidgetItem(""));
-                if(!entry.checkList.isEmpty())
+                switch (j)
                 {
-                    if(entry.checkList[segs[i].segId[j-2]])
+                case 0:
+                    segs[i].table->setItem(row, j, new QTableWidgetItem(entry.id));
+                    break;
+                case 1:
+                    segs[i].table->setItem(row, j, new QTableWidgetItem(QString(entry.name)));
+                    break;
+                default:
+                {
+                    segs[i].table->setItem(row, j, new QTableWidgetItem(""));
+                    if(!entry.checkList.isEmpty())
                     {
-                        segs[i].table->item(row, j)->setCheckState(Qt::Checked);
-                        //qDebug() << entry.id << "Checked";
+                        if(entry.checkList[segs[i].segId[j-2]])
+                        {
+                            segs[i].table->item(row, j)->setCheckState(Qt::Checked);
+                            //qDebug() << entry.id << "Checked";
+                        }
+                        else
+                        {
+                            segs[i].table->item(row, j)->setCheckState(Qt::Unchecked);
+                            //qDebug() << entry.id << "Unchecked";
+                        }
                     }
-                    else
-                    {
-                        segs[i].table->item(row, j)->setCheckState(Qt::Unchecked);
-                        //qDebug() << entry.id << "Unchecked";
-                    }
+                    break;
                 }
-                break;
-            }
-            }
-            DisableEditItem(segs[i].table->item(row, j));
-        }//col
-        row++;
+                }
+                DisableEditItem(segs[i].table->item(row, j));
+            }//col
+            row++;
+        }//entry.type != 0
     }//row
     loaded = true;
     changed = false;
@@ -656,28 +659,31 @@ void MainWindow::pbSave_click()
         quint16 filter = 0;
         foreach (CIdEntry entry, segs[i].segMap)
         {
-            QStringList seguse;
-            //seguse.clear();
-            for(quint8 seg=0; seg<count; seg++)
-            {//add used segments for this id entry
-                if(entry.checkList[seg])
-                {
-                    if(seg != i)    seguse.append(QString::number(seg+1));
-                }
-            }
-            if(seguse.size() > 0)
+            if(entry.type != 0)
             {
-                filter++;
-                tmpMap[prefix + tab + GetSection("filter_", filter).mid(1)] = entry.id;
-                if(seguse.size() < count-1)
-                {
-                    QString prefixdst = prefix + GetSection("Filter_Dst_", filter);
-                    for(quint8 segfilter=1; segfilter<=seguse.size(); segfilter++)
+                QStringList seguse;
+                //seguse.clear();
+                for(quint8 seg=0; seg<count; seg++)
+                {//add used segments for this id entry
+                    if(entry.checkList[seg])
                     {
-                        tmpMap[prefixdst + tab + "filter_dst" + GetSection("_", segfilter).mid(1)] = seguse[segfilter-1];
+                        if(seg != i)    seguse.append(QString::number(seg+1));
                     }
                 }
-            }
+                if(seguse.size() > 0)
+                {
+                    filter++;
+                    tmpMap[prefix + tab + GetSection("filter_", filter).mid(1)] = entry.id;
+                    if(seguse.size() < count-1)
+                    {
+                        QString prefixdst = prefix + GetSection("Filter_Dst_", filter);
+                        for(quint8 segfilter=1; segfilter<=seguse.size(); segfilter++)
+                        {
+                            tmpMap[prefixdst + tab + "filter_dst" + GetSection("_", segfilter).mid(1)] = seguse[segfilter-1];
+                        }
+                    }
+                }
+            }//entry.type != 0
         }//id entry
     }//seg /Interface01/Alias/\talias01
 
