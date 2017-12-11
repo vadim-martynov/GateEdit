@@ -206,14 +206,28 @@
        </widget>
       </item>
       <item>
-       <widget class="QCheckBox" name="chFlashAdd">
-        <property name="whatsThis">
-         <string>Add to backup storage</string>
+       <layout class="QHBoxLayout" name="horizontalLayout_3">
+        <property name="topMargin">
+         <number>0</number>
         </property>
-        <property name="text">
-         <string>Add to backup storage</string>
-        </property>
-       </widget>
+        <item>
+         <widget class="QCheckBox" name="chFlashAdd">
+          <property name="whatsThis">
+           <string>Add to backup storage</string>
+          </property>
+          <property name="text">
+           <string>Add to backup storage</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCheckBox" name="chSync">
+          <property name="text">
+           <string>Synchronize gates</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
       </item>
       <item>
        <layout class="QHBoxLayout" name="horizontalLayout">

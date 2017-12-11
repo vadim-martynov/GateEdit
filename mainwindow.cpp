@@ -14,6 +14,7 @@ MainWindow::MainWindow(QWidget *parent, QStringList args) :
     ui->lbSelectTimeStamp->setVisible(false);
     ui->lwStorage->setVisible(false);
     ui->chFlashAdd->setVisible(false);
+    ui->chSync->setVisible(false);
 
     connect(ui->pbCancel, SIGNAL (clicked()), this, SLOT (pbCancel_click()));
     connect(ui->pbSave, SIGNAL (clicked()), this, SLOT (pbSave_click()));
@@ -61,6 +62,7 @@ MainWindow::MainWindow(QWidget *parent, QStringList args) :
         //gate[net].sign = "";
     }
     rbNet[0]->setChecked(true);
+    ui->chSync->setChecked(false);
 
     connect(ui->chFlash, SIGNAL(toggled(bool)), SLOT(chFlash_change(bool)));
     connect(ui->chFlashAdd, SIGNAL(toggled(bool)), SLOT(chFlashAdd_change(bool)));
@@ -105,7 +107,7 @@ void MainWindow::init_shot()
 void MainWindow::pbSelect_click()
 {
     base = int(rbNet[1]->isChecked());
-    //qDebug() << "base gate " << gate[base].dirName;
+    //qDebug() << "base gate " << base << gate[base].dirName;
 
     if(ui->chFlash->isChecked())
     {
@@ -184,6 +186,7 @@ void MainWindow::startLoading()
             loop.exec();
             ui->tabSegments->setVisible(true);
             ui->chFlashAdd->setVisible(true);
+            ui->chSync->setVisible(true);
             ui->frLoading->setVisible(false);
             started = true;
         }
@@ -243,6 +246,8 @@ void MainWindow::ViewProgressSave()
         inc = 25;
     }
     vl += inc;
+    if(!ui->chSync->isChecked())
+        vl += inc;
     ui->progressBar->setValue(vl);
     Defrost();
 }
@@ -711,7 +716,7 @@ void MainWindow::pbSave_click()
     changed = false;
     restored = false;
     ui->pbCancel->setEnabled(changed);
-    ui->pbSave->setEnabled(changed);
+    //ui->pbSave->setEnabled(changed);
 
     //save backup to storage
     if(ui->chFlashAdd->isChecked())
@@ -935,26 +940,44 @@ bool MainWindow::GetConfigFromGate(quint8 item)
 
 void MainWindow::PutConfigToGates()
 {
-    ui->label->setText(tr("Gate configuration net synchronization"));
+    if(ui->chSync->isChecked())
+    {
+        ui->label->setText(tr("Gate configuration net synchronization"));
+        AddInfo(tr("Start synchronization process"));
+    }
+    else
+    {
+        ui->label->setText(tr("Gate configuration net transfer"));
+        AddInfo(tr("Start transfer process"));
+    }
     ui->progressBar->setValue(0);
     ui->lwInfoStart->clear();
     ui->tabSegments->setVisible(false);
     ui->chFlashAdd->setVisible(false);
+    ui->chSync->setVisible(false);
     ui->frLoading->setVisible(true);
-    AddInfo(tr("Start synchronization process"));
 
     for(quint8 host=0; host<gate.size(); host++)
-        for(quint8 item=0; item<gate.size(); item++)
+    {
+        if(host == base || ui->chSync->isChecked())
         {
-            if(PutConfig(host, item))
-                AddInfo(tr("Config file: %1 was copied to host: %2").arg(gate[item].remoteDir + "/" + FILE_HW, gate[host].host.toString()));
-            else
-                AddInfo(tr("Error! Config file: %1 not was copied to host: %2").arg(gate[item].remoteDir + "/" + FILE_HW, gate[host].host.toString()));
-            ViewProgressSave();
+            for(quint8 item=0; item<gate.size(); item++)
+            {
+                if(PutConfig(host, item))
+                    AddInfo(tr("Config file: %1 was copied to host: %2").arg(gate[item].remoteDir + "/" + FILE_HW, gate[host].host.toString()));
+                else
+                    AddInfo(tr("Error! Config file: %1 not was copied to host: %2").arg(gate[item].remoteDir + "/" + FILE_HW, gate[host].host.toString()));
+                ViewProgressSave();
+            }
         }
+    }
     AddInfo(tr("Done"));
-    ui->statusBar->showMessage(tr("Synchronization completed"), 10000);
+    if(ui->chSync->isChecked())
+        ui->statusBar->showMessage(tr("Synchronization completed"), 10000);
+    else
+        ui->statusBar->showMessage(tr("Transfer completed"), 10000);
 
+    ui->chSync->setChecked(false);
 }
 
 bool MainWindow::PutConfig(quint8 host, quint8 item)
@@ -1163,7 +1186,8 @@ void MainWindow::timer_shot()
 
     //save button manegement
     bool writeReady = ui->chFlashAdd->isChecked() && flashReady;
-    ui->pbSave->setEnabled(started && (writeReady || changed || restored));
+    bool syncChecked = ui->chSync->isChecked();
+    ui->pbSave->setEnabled(started && (writeReady || changed || restored || syncChecked));
 
 //    foreach (SFlash entry, flash)
 //    {
