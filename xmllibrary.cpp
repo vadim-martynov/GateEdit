@@ -9,10 +9,12 @@ CCfgXML::CCfgXML()
     vectorSize = 10;
     xmlValue.resize(vectorSize);
     initData.clear();
+    endLineMode = EL_AUTO;
 }
 
 void CCfgXML::parseData(QByteArray *pData)
 {
+    cfgMap.clear();
     cfgFilePath = "";
     pDataXml = pData;
     QDomDocument document = getDocument();
@@ -23,6 +25,7 @@ void CCfgXML::parseData(QByteArray *pData)
 
 void CCfgXML::parseFile(const QString &filePath)
 {
+    cfgMap.clear();
     cfgFilePath = filePath;
     pDataXml = &initData;
     QDomDocument document = getDocument();
@@ -43,16 +46,19 @@ void CCfgXML::parserXml(const QDomNode &node, quint8 numLevel)
                     xmlValue[numLevel] = domElement.attribute("n","no set");
 
                     if(!domElement.hasChildNodes())
-                        {
+                    {
                         QString s, v;
                         for(quint8 i=1; i<=numLevel; i++)
-                            {
-                                s=s+ "/" + xmlValue[i];
-                            }
-                        v=domElement.attribute("v","empty");
-                        if(v == "empty"){s += "/empty";}
-                        cfgMap.insert(s,v);
+                        {
+                            s=s+ "/" + xmlValue[i];
                         }
+                        v=domElement.attribute("v","empty");
+                        if(v == "empty")
+                        {
+                            s += "/\tempty"; // s += "/empty" - old incorrect
+                        }
+                        cfgMap.insert(s,v);
+                    }
                 }
             }
 
@@ -64,9 +70,15 @@ void CCfgXML::parserXml(const QDomNode &node, quint8 numLevel)
 QString CCfgXML::getValue(const QString &pathToParameter, const QString &parameter, const QString &defValue)
 {
     QString s = pathToParameter;
-    if(parameter.length() != 0)     s+="/\t" + parameter;
+    if(parameter.length() != 0)
+    {
+        s += "/\t" + parameter;
+    }
     s = cfgMap[s];
-    if(s.isEmpty()){s =defValue;}
+    if(s.isEmpty())
+    {
+        s = defValue;
+    }
     return s;
 }
 
@@ -225,6 +237,9 @@ QString CCfgConf::cfgParam(const QString &s)
 QString CCfgConf::cfgValue(const QString &s)
 {
     QString sv = s.mid(s.indexOf("=") + 2);
+    //
+    sv = symbOff(sv);
+    //
     if(sv.startsWith("\""))
     {
         sv = "$" + sv.mid(1,sv.size() - 2);
@@ -232,22 +247,51 @@ QString CCfgConf::cfgValue(const QString &s)
     return sv;
 }
 
+QString CCfgXML::symbOff(const QString &s)
+{
+    QString st = s;
+    st = st.replace("&", "&amp;");
+    st = st.replace("<", "&lt;");
+    st = st.replace(">", "&gt;");
+    st = st.replace("'", "&apos;");
+    //st = st.replace("\"", "&quot;");
+    return st;
+}
+
+QString CCfgXML::symbOn(const QString &s)
+{
+    QString st = s;
+    st = st.replace("&amp;", "&");
+    st = st.replace("&lt;", "<");
+    st = st.replace("&gt;", ">");
+    st = st.replace("&apos;", "'");
+    //st = st.replace("&quot;", "\"");
+    return st;
+}
+
+void CCfgXML::SetOutputEndLine(quint8 endLine)
+{
+    endLineMode = endLine;
+}
+
 void CCfgXML::writeFile(const QString &filePath)
 {
     xmlOutput = filePath.endsWith(EXT_XML) || filePath.endsWith(EXT_INI);
     if (!filePath.isEmpty()) {
         QFile file(filePath);
-        if (file.open(QIODevice::WriteOnly | QIODevice::Text | QIODevice::Truncate))
+        if (file.open(QIODevice::WriteOnly | QIODevice::Truncate))
         {
+            file.setTextModeEnabled(endLineMode == EL_AUTO);
+
             QTextStream out(&file);
-            QTextCodec* RusCodec ;
+            QTextCodec* RusCodec;
 
             if(xmlOutput)
             {
                 RusCodec = QTextCodec::codecForName(RU_WIN);
                 out.setCodec(RusCodec);
-                out << "<?xml version=\"1.0\" encoding=\"windows-1251\"?>" << "\n";
-                out << "<n ver=\"1.1\">" << "\n";
+                out << "<?xml version=\"1.0\" encoding=\"windows-1251\"?>" << lineTerm();
+                out << "<n ver=\"1.1\">" << lineTerm();
             }
             else
             {
@@ -274,7 +318,10 @@ void CCfgXML::writeFile(const QString &filePath)
                {
                     sk = sk.mid(1);
                     qint8 n = sk.indexOf("/");
-                    if(n == -1){break;}
+                    if(n == -1)
+                    {
+                        break;
+                    }
                     xmlValue[level]= sk.left(n);
                     level++;
                     sk = sk.mid(n);
@@ -312,7 +359,7 @@ void CCfgXML::writeFile(const QString &filePath)
             }
             if(xmlOutput)
             {
-                out << "</n>\n";
+                out << "</n>" + lineTerm();
             }
             file.close();
         }
@@ -326,13 +373,18 @@ QString CCfgXML::makeParamLine(const qint8 &indent, const QString &param, const 
         s += "\t";
 
     if(xmlOutput)
-        s += "\t<n n=\"" + param + "\" v=\"" + value + "\"/>\n";
+        s += "\t<n n=\"" + param + "\" v=\"" + value + "\"/>" + lineTerm();
     else
     {
         v = value;
         if(v.left(1)=="$")
-        {v = "\"" + v.mid(1) + "\"";}
-        s += param + " = " + v + "\n";
+        {
+            v = "\"" + v.mid(1) + "\"";
+        }
+        s += param + " = " + v + lineTerm();
+        //
+        s = symbOn(s);
+        //
     }
     return s;
 }
@@ -344,9 +396,9 @@ QString CCfgXML::makeKeyLine(const qint8 &indent, const QString &param)
         s += "\t";
 
     if(xmlOutput)
-        s += "\t<n n=\"" + param + "\">\n";
+        s += "\t<n n=\"" + param + "\">" + lineTerm();
     else
-        s += "[" + param + "]\n";
+        s += "[" + param + "]" + lineTerm();
     return s;
 }
 
@@ -357,9 +409,24 @@ QString CCfgXML::makeEndLine(const qint8 &indent, const QString &param)
         s += "\t";
 
     if(xmlOutput)
-        s += "\t</n>\n";
+        s += "\t</n>" + lineTerm();
     else
-        s += "[#" + param + "]\n";
+        s += "[#" + param + "]" + lineTerm();
 
     return s;
+}
+
+QString CCfgXML::lineTerm()
+{
+    if(endLineMode == EL_WIN)
+        return "\r\n";
+    else
+        return "\n";
+
+
+//#ifdef WIN32
+//    return "\n";
+//#else
+//    return "\r\n";
+//#endif
 }

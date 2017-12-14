@@ -85,6 +85,7 @@ MainWindow::MainWindow(QWidget *parent, QStringList args) :
     //EjectWinFlash("O");
     //ExtractLine("/dev/sdc1: LABEL = \"NITA-VADIM\" UUID = \"FCE6-716D\" TYPE = \"vfat\"", " = ");
 
+
 }
 
 MainWindow::~MainWindow()
@@ -376,6 +377,8 @@ quint8 MainWindow::FindSegmentPath()
         if(name.isEmpty())
             name = tcms.getValue(sysSufAlt + "/AdditionalConfigNames", addconfname).mid(1);
         if(name.isEmpty())
+            name = tcms.getValue("/AdditionalConfigNames", addconfname).mid(1);
+        if(name.isEmpty())
             return SEG_BAD_NAME;
 
         //qDebug() << "[]" << name.size() << name.isEmpty() << name;
@@ -642,7 +645,11 @@ void MainWindow::pbCancel_click()
 
 void MainWindow::pbSave_click()
 {
-    QString timestamp = QString::number(QDateTime::currentMSecsSinceEpoch());
+    QString timestamp;
+    if(changed)
+        timestamp = QString::number(QDateTime::currentMSecsSinceEpoch());
+    else
+        timestamp = gate[base].timestamp;
     QString tab = "/\t";
     QString prefix = tab;
     QMap<QString, QString> tmpMap;
@@ -694,6 +701,7 @@ void MainWindow::pbSave_click()
 
 
     CCfgConf out;
+    out.SetOutputEndLine(EL_UNIX);
     //store gate1
     out.SetMap(tmpMap);
     out.writeFile(gate[base].localDir + "/" + FILE_HW);
@@ -720,7 +728,10 @@ void MainWindow::pbSave_click()
 
     //save backup to storage
     if(ui->chFlashAdd->isChecked())
+    {
         SaveBackup(timestamp);
+        ui->chFlashAdd->setChecked(false);
+    }
 
     //net store by ftp
     PutConfigToGates();
@@ -1041,17 +1052,23 @@ void MainWindow::SaveBackup(const QString &timestamp)
     QString source = gate[0].localDir + "/" + FILE_HW;
     QString target = path + "/" + timestamp + FILE_EXT;
     QFile fileHw(source);
-    if(fileHw.copy(source, target))
+    if(fileHw.exists(target))
     {
-        ui->statusBar->showMessage(tr("Backup file created"), 10000);
-        //qDebug() << "create backup file - ok";
-        ui->chFlashAdd->setChecked(false);
+        ui->statusBar->showMessage(tr("Backup file already exists!"), 10000);
+        //qDebug() << "backup file already exists";
     }
     else
     {
-        ui->statusBar->showMessage(tr("Backup file create error!"), 10000);
-        //qDebug() << "error create file";
-        return;
+        if(fileHw.copy(source, target))
+        {
+            ui->statusBar->showMessage(tr("Backup file created"), 10000);
+            //qDebug() << "create backup file - ok";
+        }
+        else
+        {
+            ui->statusBar->showMessage(tr("Backup file create error!"), 10000);
+            //qDebug() << "error create file";
+        }
     }
 }
 
@@ -1189,6 +1206,8 @@ void MainWindow::timer_shot()
     bool syncChecked = ui->chSync->isChecked();
     ui->pbSave->setEnabled(started && (writeReady || changed || restored || syncChecked));
 
+//    qDebug() << started << "&&" << writeReady << changed << restored << syncChecked;
+
 //    foreach (SFlash entry, flash)
 //    {
 //        qDebug() << entry.mount << entry.label << entry.uuid;
@@ -1321,10 +1340,10 @@ void MainWindow::GetRevision(quint8 item)
 {
     CCfgConf hw;
     hw.parseFile(gate[item].localDir + "/" + FILE_HW);
-    QString timestamp = hw.getValue("", "time_stamp");
+    gate[item].timestamp = hw.getValue("", "time_stamp");
     QDateTime dt;
     dt.setMSecsSinceEpoch(0);
-    dt = dt.addMSecs(timestamp.toLongLong());
+    dt = dt.addMSecs(gate[item].timestamp.toLongLong());
     gate[item].revision = tr("revision: %1").arg(dt.toString("yyyy-MM-dd  hh:mm:ss"));
     gate[item].sign = hw.getValue("", "system_signature").mid(1);
     return;

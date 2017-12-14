@@ -28,7 +28,7 @@
 #define LINUX_MNT           "/mnt/flash"
 #define DIR_STORAGE         "/GateStorage"
 
-#define TITLE_MAIN          "GateEditor v.1.3.5"
+#define TITLE_MAIN          "GateEditor v.1.3.6"
 /*history
  *
  *1.1.1 use alternate additional config system sections
@@ -41,8 +41,10 @@
  *1.3.3 backup for windows correct info
  *1.3.4 protect for missed Id in filters
  *1.3.5 no sync by default
+ *1.3.6 new xmllibrary / new timestamp only if data changed
+ *      / find AdditionalConfigNames in all places
  *
- *final linux & windows release 15.10.2017
+ *final linux & windows release 14.12.2017
 */
 
 namespace Ui {
@@ -57,6 +59,7 @@ struct SGate
     QString remoteDir;
     QHostAddress host;
     bool connected;
+    QString timestamp;
     QString revision;
     QString sign;
 };
@@ -158,7 +161,7 @@ private:
     QString LeftTo(const QString &text, const QString &target);
     QString RightFrom(const QString &text, const QString &target);
     QString RightFromLast(const QString &text, const QString &target);
-    void ExtractLine(QMap<QString, QString> *, const QString &text, const QString &mark = "=");
+    void ExtractLine(QMap<QString, QString> *line, const QString &text, const QString &mark = "=");
 
 
 protected:
