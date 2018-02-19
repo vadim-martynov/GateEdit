@@ -266,7 +266,7 @@ void MainWindow::FillPermissions(quint8 i)
         run = (id != 0);
         if(run)
         {
-            if(segs[i].segMap[id].type > 0)
+            if(segs[i].segMap.value(id).type > 0)
             {
                 QString prefix_f = prefix + GetSection( "Filter_Dst_", j);
                 bool pass = true;
@@ -299,7 +299,7 @@ void MainWindow::FillPermissions(quint8 i)
             }
             else
             {
-                qDebug() << "Missed Id:" << id << segs[i].segMap[id].type;
+                qDebug() << "Missed Id in filters:" << id;
             }
         }
     }while(run);
@@ -476,13 +476,15 @@ void MainWindow::FindAbonents(quint8 i)
                     break;
                 default:
                     //qDebug() << "add int" << tmp.type << tmp.id << segs[curSegment].segMap.size();
-                    if(tmp.id.toInt() > 0) segs[i].segMap[tmp.id.toInt()] = tmp;
-                    if(tmp.type == 121)//ISDN
+                    if(tmp.id.toInt() > 0)
+                        segs[i].segMap[tmp.id.toInt()] = tmp;
+                    if(tmp.type == 121 || tmp.type == 502)//ISDN
                     {
                         for(quint8 slot = 1; slot < 31; slot++)
                         {
                             tmp.id = hardware.getValue(interface + GetSection( "slot_", slot), "internal_address");
-                            if(tmp.id.toInt() > 0) segs[i].segMap[tmp.id.toInt()] = tmp;
+                            if(tmp.id.toInt() > 0)
+                                segs[i].segMap[tmp.id.toInt()] = tmp;
                         }
                     }
                     break;
@@ -521,7 +523,8 @@ void MainWindow::ClearCheckList(quint8 i)
     {
         for(quint8 k=0; k<count; k++)
         {
-            segs[i].segMap[entry.id.toInt()].checkList[k] = false;
+            if(entry.id.toInt() != 0)
+                segs[i].segMap[entry.id.toInt()].checkList[k] = false;
         }
     }
 }
@@ -539,7 +542,7 @@ void MainWindow::FillTables(quint8 i)
 
     foreach(CIdEntry entry, segs[i].segMap)
     {
-        //qDebug() << entry.type << entry.id << entry.name.toLocal8Bit();
+        //qDebug() << entry.type << entry.id << entry.name;
         if(entry.type != 0)
         {
             for(quint8 j = 0; j < count+1; j++)
@@ -769,29 +772,44 @@ void MainWindow::tableItem_change(QTableWidgetItem *item)
             break;
         }
     }
+
+    if(item->tableWidget()->item(row, 0) == 0 || item->tableWidget()->item(row, 1) == 0)
+        return; // protect for zero items
     QString id = item->tableWidget()->item(row, 0)->text();
     QString name = item->tableWidget()->item(row, 1)->text();
+
+
     if(item->isSelected())
     {
+        //qDebug() << "selected";
         for(quint8 ic=2; ic<count+1; ic++)
         {
             for(quint16 ir=0; ir<item->tableWidget()->rowCount(); ir++)
             {
-                if(item->tableWidget()->item(ir,ic)->isSelected())
+                //qDebug() << "sel" << ir << ic << item->tableWidget()->item(ir,ic);
+                if(item->tableWidget()->item(ir,ic) != 0)
                 {
-                    item->tableWidget()->item(ir,ic)->setSelected(false);
-                    item->tableWidget()->item(ir,ic)->setCheckState(item->checkState());
+                    if(item->tableWidget()->item(ir,ic)->isSelected())
+                    {
+                        item->tableWidget()->item(ir,ic)->setSelected(false);
+                        item->tableWidget()->item(ir,ic)->setCheckState(item->checkState());
+                    }
                 }
             }
         }
     }
-    bool state = item->checkState();
-    segs[curSeg].segMap[id.toInt()].checkList[curCheck] = state;
-    QString status;
-    state? status = tr("checked"): status = tr("unchecked");
-//    qDebug() << tr("Last change: ") << segName << id << name << chSegName << state << status;
-    QString msg = tr("In segment %1 for id %2 (%3) permission flag for segment %4 set %5").arg(segName, id, name, chSegName, status);
-    ui->statusBar->showMessage(msg, 10000);
+    if(id.toInt() != 0)
+    {
+        bool state = item->checkState();
+        segs[curSeg].segMap[id.toInt()].checkList[curCheck] = state;
+        QString status;
+        state? status = tr("checked"): status = tr("unchecked");
+        //qDebug() << tr("Last change: ") << segName << id << name << chSegName << state << status;
+        QString msg = tr("In segment %1 for id %2 (%3) permission flag for segment %4 set %5").arg(segName, id, name, chSegName, status);
+        ui->statusBar->showMessage(msg, 10000);
+    }
+    else
+        qDebug() << "Not provided row ID=0";
 }
 
 void MainWindow::AddInfo(const QString &text)

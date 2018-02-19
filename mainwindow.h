@@ -28,7 +28,7 @@
 #define LINUX_MNT           "/mnt/flash"
 #define DIR_STORAGE         "/GateStorage"
 
-#define TITLE_MAIN          "GateEditor v.1.3.6"
+#define TITLE_MAIN          "GateEditor v.1.3.7"
 /*history
  *
  *1.1.1 use alternate additional config system sections
@@ -43,8 +43,9 @@
  *1.3.5 no sync by default
  *1.3.6 new xmllibrary / new timestamp only if data changed
  *      / find AdditionalConfigNames in all places
+ *1.3.7 protect for missed Id in filters full
  *
- *final linux & windows release 14.12.2017
+ *final linux & windows release 22.12.2017
 */
 
 namespace Ui {
